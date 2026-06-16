@@ -1,15 +1,15 @@
 # better-word
 
-`better-word` 是一个 Codex skill，用 AI + LaTeX 替代容易漂移的 Word 课程报告排版流程，并在需要时导出 Word `.docx`。
+`better-word` 是一个 Codex skill，用 AI 生成课程报告，并按目标文件选择最稳的排版路线：PDF 走 LaTeX，Word 走原生 `.docx` 模板。
 
-核心思路是：不要让 AI 直接生成难以稳定排版的 Word。先把学校或课程的官方 Word/PDF/截图模板转换成格式规则，再让 AI 按这个模板输出 `.tex`，最后用 XeLaTeX、LuaLaTeX 或 Overleaf 编译成 PDF；如果必须提交 Word，则用 Pandoc 和 `reference.docx` 导出 `.docx`。
+核心思路是：不要把所有场景都塞进 LaTeX。只交 PDF 时，用 LaTeX 获得稳定排版；必须交 Word 且要像官方模板时，直接复制并填充原始 `.docx` 模板，避免 LaTeX 转 Word 带来的格式损失。
 
 ## 适合做什么
 
 - 从学校官方 Word、PDF 或截图模板中提取页边距、字体字号、行距、标题层级、页眉页脚、图表编号和参考文献规则。
 - 生成可复用的中文课程报告 LaTeX 模板。
-- 让 AI 按固定模板写课程报告源码，而不是输出需要手动修的 `.docx`。
-- 在需要提交 Word 时，从 LaTeX 或 Pandoc Markdown 导出 `.docx`。
+- 只需要 PDF 时，让 AI 按固定模板写 `.tex`。
+- 需要 Word 时，基于官方 `.docx` 模板生成新 `.docx`，尽量保留原始样式、页眉页脚、编号和节设置。
 - 编译并检查 PDF，减少 Word 合并、图片拖动、样式联动导致的格式问题。
 
 ## 安装
@@ -42,6 +42,16 @@ git clone <复制的仓库地址> ~/.codex/skills/better-word
 C:\Users\<你的用户名>\.codex\skills\better-word
 ```
 
+## 最短用法
+
+只需要告诉 Codex 三件事：
+
+1. 模板文件：最好是官方 `.docx`，只有 PDF/截图也可以。
+2. 报告内容：主题、提纲、资料或已有草稿。
+3. 目标格式：`PDF`、`Word` 或 `both`。
+
+如果目标是 Word 且要求“看起来像官方模板”，必须提供原始 `.docx` 模板。仅靠截图或 LaTeX 转 Word，无法稳定做到以假乱真。
+
 ## 使用示例
 
 分析学校模板：
@@ -50,22 +60,22 @@ C:\Users\<你的用户名>\.codex\skills\better-word
 Use $better-word to analyze this official course report template and extract the formatting rules.
 ```
 
-生成 LaTeX 模板：
+生成 PDF：
 
 ```text
-Use $better-word to generate a reusable LaTeX course report template from these extracted rules.
+Use $better-word to write a course report about <主题>. Target output: PDF.
 ```
 
-按模板写报告：
+生成高保真 Word：
 
 ```text
-Use $better-word to write a course report about <主题>. Return compilable .tex source and keep the template formatting rules.
+Use $better-word to write a course report about <主题>. Target output: Word. Use the official .docx template as the formatting source of truth.
 ```
 
-同时导出 Word：
+同时生成 Word 和 PDF：
 
 ```text
-Use $better-word to write a course report about <主题> and export both PDF and DOCX. Use the official Word template as reference.docx for the DOCX export.
+Use $better-word to write a course report about <主题>. Target output: both Word and PDF. Word fidelity is more important than LaTeX typography.
 ```
 
 ## 依赖
@@ -78,12 +88,13 @@ Use $better-word to write a course report about <主题> and export both PDF and
 
 - 本地 TeX 工具链：TeX Live 或 MiKTeX。
 - 编译命令：`latexmk -xelatex`，或运行 `xelatex` 两次。
-- Word 导出：Pandoc；如果有官方 Word 模板，建议作为 `--reference-doc reference.docx` 使用。
+- Word 生成：官方 `.docx` 模板；可选 `python-docx`、直接 OOXML 编辑、`docxtpl`。
+- 近似 Word 导出：Pandoc；适合草稿，不适合以假乱真的模板还原。
 - 在线替代方案：Overleaf，建议选择 XeLaTeX 或 LuaLaTeX 编译器。
 
 中文报告建议优先使用 XeLaTeX 或 LuaLaTeX。模板中默认使用 `ctexart`，适合作为中文课程报告的起点；具体学校字体、字号和页边距应按官方模板审计结果调整。
 
-DOCX 导出建议优先使用 Pandoc。复杂 LaTeX 宏、标题页、浮动图表和严格 Word 样式不一定能被 Pandoc 完整保留；这类场景应同时维护 `main.tex` 作为 PDF 源文件，以及 `main.md` 作为 Word 导出的 Pandoc Markdown 中间稿。
+高保真 `.docx` 不建议从 LaTeX/Pandoc 反向转换。Pandoc 可以做可编辑草稿，但很难完整还原 Word 模板里的页眉页脚、节、编号、标题页和样式继承。真正要像官方模板，应以原始 `.docx` 为源文件，复制后填充内容。
 
 ## 仓库结构
 
@@ -118,7 +129,7 @@ latexmk -xelatex -interaction=nonstopmode better-word-template.tex
 Pop-Location
 ```
 
-如果安装了 Pandoc，可以导出 Word：
+如果只是需要近似可编辑 Word，安装 Pandoc 后可以导出：
 
 ```powershell
 pandoc main.tex --from latex --to docx --output main.docx --reference-doc reference.docx

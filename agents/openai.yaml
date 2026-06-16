@@ -1,4 +1,4 @@
 interface:
   display_name: "Better Word"
-  short_description: "LaTeX report workflow with DOCX export"
-  default_prompt: "Use $better-word to convert my school Word report template into reusable LaTeX and optional DOCX export."
+  short_description: "PDF and high-fidelity Word reports"
+  default_prompt: "Use $better-word to create my course report as PDF or high-fidelity Word from the official template."

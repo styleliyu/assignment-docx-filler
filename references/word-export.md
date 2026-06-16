@@ -1,64 +1,89 @@
-# Word Export Guide
+# Word Output Guide
 
-Use this guide when the user needs a `.docx` file in addition to, or instead of, PDF.
+Use this guide when the user needs a `.docx` file. There are two routes:
 
-## Recommended Route
+1. **DOCX-native route**: highest fidelity, recommended for official Word submissions.
+2. **Pandoc route**: faster, useful for editable drafts, not reliable for exact template reproduction.
 
-Use LaTeX as the PDF source of truth, then export Word with Pandoc:
+## Choose the Route
+
+Use DOCX-native generation when the user says the Word file must:
+
+- Look like the original school template.
+- Preserve headers, footers, page numbers, margins, section breaks, or cover-page layout.
+- Remain editable in Word with the official styles.
+- Pass visual inspection by a teacher, school system, or print shop.
+
+Use Pandoc only when:
+
+- The user mainly wants editable text in `.docx`.
+- Approximate formatting is acceptable.
+- The source is already Markdown or simple LaTeX.
+
+## DOCX-Native Route
+
+Treat the official `.docx` template as the formatting source of truth.
+
+Workflow:
+
+1. Copy the official template to a new output file.
+2. Inspect existing paragraph styles, character styles, table styles, numbering definitions, sections, headers, and footers.
+3. Replace sample text or placeholder regions instead of rebuilding the document from scratch.
+4. Insert generated content using existing Word styles such as title, heading, body, caption, bibliography, and table styles.
+5. Preserve `styles.xml`, `numbering.xml`, section properties, headers, footers, relationships, and media unless a change is required.
+6. Open or render the final `.docx` and compare it with the official template.
+
+Implementation options:
+
+- Use the document tooling available in the current environment when present.
+- Use `python-docx` for normal paragraphs, headings, tables, and style assignment.
+- Use direct OOXML edits for fragile areas such as headers, footers, numbering, section properties, fields, and advanced placeholders.
+- Use `docxtpl` only when the template already contains explicit Jinja-style placeholders.
+
+Do not strip and recreate the whole document. That usually loses the exact Word formatting.
+
+## Pandoc Route
+
+Use Pandoc for approximate `.docx` export:
 
 ```powershell
 pandoc main.tex --from latex --to docx --output main.docx
 ```
 
-When an official Word template exists, use it as a reference document so Pandoc can inherit Word styles:
+When an official Word template exists, pass it as a reference document:
 
 ```powershell
 pandoc main.tex --from latex --to docx --output main.docx --reference-doc reference.docx
 ```
 
-Use the official template directly as `reference.docx` when possible. If the template contains sample content, first save a clean copy that keeps the styles, margins, headers, footers, numbering, and caption styles but removes assignment-specific text.
-
-## When LaTeX to DOCX Is Not Enough
-
-Pandoc handles common sections, paragraphs, lists, tables, images, citations, and math, but it can lose or simplify complex LaTeX layout commands.
-
-Prefer a Pandoc Markdown intermediate when the report contains:
-
-- Heavy `ctex`, `titlesec`, custom title page, or custom caption macros.
-- Complex tables that rely on LaTeX-only packages.
-- Strict Word styles that must remain editable.
-- A school requirement to submit `.docx` rather than PDF.
-
-In that case, generate:
-
-1. `main.tex` for high-fidelity PDF output.
-2. `main.md` for Word export with Pandoc-friendly structure.
-3. `reference.docx` copied or cleaned from the official Word template.
-
-Export with:
+For better Word output, prefer a Pandoc Markdown intermediate over complex LaTeX:
 
 ```powershell
 pandoc main.md --from markdown --to docx --output main.docx --reference-doc reference.docx
 ```
 
-## Authoring Rules for Better DOCX
+Pandoc can lose or simplify complex `ctex`, `titlesec`, title-page, caption, table, bibliography, page-break, and floating layout commands. State this limitation clearly when using this route.
 
-- Use normal heading levels instead of visual-only headings.
-- Use semantic captions such as `图 1` and `表 1` if automatic Word caption fields are not required.
-- Keep tables simple when Word editability matters.
-- Put figures in ordinary image blocks with captions.
-- Keep citations in a Pandoc-supported citation format when bibliography automation is needed.
-- Avoid relying on LaTeX-only spacing, page-break, font, and floating rules for the Word version.
+## Simplified User Flow
+
+Ask for only what is needed:
+
+- Target output: PDF, Word, or both.
+- Official template: `.docx` for high-fidelity Word, PDF/screenshot acceptable for PDF-only.
+- Report topic or source material.
+
+Then proceed directly. Do not require the user to manually extract formatting rules unless no template file is available.
 
 ## Verification
 
-Always open or inspect the `.docx` after export and check:
+For high-fidelity Word output, compare against the original template:
 
-- Page size and margins.
-- Chinese and Latin fonts.
-- Heading levels and table of contents behavior.
-- Figure/table captions and numbering.
-- Equations and symbols.
+- Page size, margins, and section breaks.
 - Header, footer, and page numbering.
+- Cover page fields and spacing.
+- Chinese and Latin fonts.
+- Heading levels, table of contents, and numbering.
+- Figure/table captions.
+- Tables, equations, and references.
 
-If Pandoc is not installed, say that DOCX export cannot be completed locally and provide the exact Pandoc command the user can run.
+If exact Word fidelity is required but no original `.docx` template is available, say that exact reproduction is not possible from screenshots alone; provide the best approximation and list visible assumptions.
