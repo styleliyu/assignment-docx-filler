@@ -1,113 +1,78 @@
 ---
-name: better-word
-description: "Build a simplified AI workflow for school or coursework reports with two output modes: LaTeX/PDF for stable typesetting, and DOCX-native generation for high-fidelity Word submissions. Use when the user wants to extract formatting rules from an official Word/PDF/screenshot template, generate or refine a reusable LaTeX report template, produce a polished PDF, create an editable Word .docx that closely preserves an official Word template, or avoid Word formatting drift in team assignments."
+name: assignment-docx-filler
+description: Fill university programming-assignment templates without rebuilding or reformatting the original document. Use when the user provides a teacher's DOCX, short code or text answers, and user-captured screenshots that must be inserted after labels such as 代码 or 运行结果 while preserving question order, styles, borders, headers, footers, numbering, and section settings. Accept PDF only as a lower-fidelity fallback when the original DOCX is unavailable.
 ---
 
-# Better Word
+# Assignment DOCX Filler
 
 ## Purpose
 
-Turn unstable Word report formatting into a reproducible report workflow:
+Create a submission copy from a teacher-provided assignment template. Modify only identified answer regions; do not regenerate the entire document.
 
-1. Ask for the target output: PDF, Word, or both.
-2. Use LaTeX as the source of truth when PDF fidelity matters most.
-3. Use the original `.docx` template as the source of truth when Word fidelity matters most.
-4. Avoid LaTeX-to-DOCX conversion for high-fidelity Word submissions.
+## Required Inputs
 
-## Mode Decision
+Collect only:
 
-Choose the simplest viable mode before generating files:
+- The original `.docx`, or a PDF fallback when DOCX is unavailable.
+- The report topic or assignment questions if they are not already in the template.
+- Short code/text answers, either generated or user-provided.
+- User-captured PNG/JPG/JPEG screenshots.
 
-- **Fast PDF mode**: use screenshots, PDF, or `.docx` to extract rules; generate `.tex`; compile PDF.
-- **High-fidelity Word mode**: require the official `.docx`; copy it and replace content while preserving Word styles, headers, footers, sections, numbering, and captions. Read `references/word-export.md`.
-- **Both outputs**: if Word must look official, generate the `.docx` first and export PDF from Word/LibreOffice when possible. If PDF typography matters more, generate LaTeX first and treat DOCX as an approximate companion.
+User-provided answers override generated content. Do not execute, refactor, annotate, or quality-review code unless explicitly requested.
 
-Do not present the user with a long process unless necessary. If they provide a template and topic, proceed with the selected mode and state only the important assumption.
+## Mode Selection
 
-Minimum inputs:
+### DOCX Mode
 
-- Official template file when available.
-- Report topic, outline, or source material.
-- Target output: PDF, Word, or both.
+Use DOCX mode whenever the original `.docx` exists. Treat the original package as the formatting source of truth.
 
-## Shared Workflow
+Read:
 
-### 1. Gather the Source Template
+- `references/template-analysis-checklist.md` before mapping answer regions.
+- `references/docx-fidelity.md` before modifying or validating the document.
 
-Prefer the highest-fidelity source available:
+### PDF Fallback Mode
 
-1. Original `.docx` template
-2. Official PDF export
-3. Full-page screenshots
-4. Partial screenshots
+Use PDF only when no DOCX exists. Preserve page appearance by filling the PDF when possible. Do not promise a high-fidelity Word file from a PDF; label any generated DOCX as approximate.
 
-When `.docx` is available, inspect its styles, page settings, headers, footers, numbering, and table/figure styles directly. Use screenshots as visual QA, not as the only source of truth unless no structured file exists.
+## Workflow
 
-### 2. Extract Only Needed Formatting Rules
+1. Copy the original template and record its hash. Never overwrite it.
+2. Reject encrypted DOCX, DOCM, damaged packages, and unresolved tracked changes.
+3. Identify question blocks and anchors such as `代码：`, `源代码：`, `程序：`, `运行结果：`, `实验结果：`, and `截图：`.
+4. Map code files by names such as `1.py`, `q1.cpp`, or `question-1.java`. Map screenshots by names such as `q1-1.png` and `q1-2.png`.
+5. Auto-accept only clear mappings. Ask about ambiguous anchors, conflicting materials, or non-empty teacher content in an answer region.
+6. Preserve anchor text and formatting. Replace only blank paragraphs or known placeholder text inside the answer region.
+7. Insert short code with inherited paragraph formatting. Use a monospaced font only when the template defines no code style.
+8. Insert user screenshots without cropping. Preserve aspect ratio and limit width to the current section's text area.
+9. Render with Microsoft Word when available and validate structure plus visible layout.
+10. Deliver `<template-name>_completed.docx`, the slot map, and a diagnostic report.
 
-Create a concise template audit before writing LaTeX or rebuilding styles. Read `references/template-analysis-checklist.md` when the task involves analyzing a Word template, PDF, or screenshots.
+Always regenerate from the original template rather than editing a previous output.
 
-Capture at least:
+## Fidelity Rules
 
-- Page size, margins, header/footer distance, page numbering.
-- Chinese and Latin fonts, font sizes, bold/italic rules, line spacing, paragraph indentation.
-- Title page fields, abstract/keywords, table of contents, section hierarchy.
-- Figure/table captions, numbering, cross-reference format.
-- Bibliography style and citation format.
-- Any uncertainty, stated as assumptions to verify.
+- Preserve question order, styles, borders, headers, footers, numbering, and section settings outside answer regions.
+- Allow page count and downstream pagination to change when answers require more space.
+- Do not use LaTeX, Pandoc, HTML conversion, or full-document reconstruction for high-fidelity DOCX output.
+- Stop before deleting non-empty teacher text or modifying unsupported table/text-box regions.
+- Do not claim fidelity validation if Microsoft Word rendering is unavailable.
 
-### 3. Generate the Report
+## Screenshot Rules
 
-For PDF mode, start from `assets/course-report-template.tex` unless the school format clearly requires another document class.
+- Screenshots must come from the user; do not fabricate application or execution screenshots.
+- Support zero or more screenshots per question.
+- Preserve source order from filename numbering.
+- Leave the template placeholder and emit a warning when a screenshot is missing.
 
-Use XeLaTeX or LuaLaTeX for Chinese documents. Prefer `ctexart` or `ctexrep` for coursework reports; avoid pdfLaTeX when Chinese text or CJK fonts are involved.
+## Output Standard
 
-Keep content and formatting separate:
+Return a successful submission only when:
 
-- Put reusable style decisions in the preamble or custom commands.
-- Keep report-specific text in the document body.
-- Use labels and references for figures, tables, formulas, and sections.
-- Use automatic numbering instead of hand-numbered headings or captions.
+- The original file remains unchanged.
+- The output opens without a Word repair prompt.
+- Every confirmed answer region contains the mapped material.
+- Unsupported or unresolved regions are clearly reported.
+- No structural validation error remains.
 
-For high-fidelity Word mode, do not convert from LaTeX. Work inside a copy of the official `.docx` template and preserve its existing Word styles. Replace placeholder/sample content, add paragraphs using existing styles, and keep section properties intact.
-
-Useful prompt shape:
-
-```text
-Use $better-word to write a course report about <topic>.
-Target output: Word. Use the official .docx template as the formatting source of truth.
-```
-
-### 4. Export and Verify
-
-For PDF output, compile before delivery when a TeX toolchain is available:
-
-```powershell
-latexmk -xelatex -interaction=nonstopmode main.tex
-```
-
-If `latexmk` is unavailable, try `xelatex` twice. Inspect the log for missing fonts, missing images, undefined references, overfull boxes, and bibliography failures. Fix the `.tex` or template instead of post-editing the PDF.
-
-When compilation is not possible, say so explicitly and still check the LaTeX source for obvious syntax problems.
-
-For Word output, read `references/word-export.md`. Use DOCX-native generation for official submissions. Use Pandoc only for approximate editable drafts.
-
-## Output Standards
-
-Deliver the minimum useful artifact set:
-
-- A reusable `.tex` template when the task is about building the school format.
-- A filled `.tex` report and compiled PDF when the task is about producing a report.
-- A `.docx` created from the original Word template when the user requests Word output or the assignment requires Word submission.
-- A short list of assumptions when template evidence is incomplete.
-
-Do not promise that Pandoc can make a `.docx` indistinguishable from the original Word template. For "looks exactly like the school template" requirements, use DOCX-native generation.
-
-## Quality Bar
-
-- Match the official template before adding aesthetic improvements.
-- Prefer simple, stable LaTeX packages over elaborate macro systems.
-- Do not hard-code page breaks to hide layout problems unless the official template requires them.
-- Keep tables, figures, references, and formulas semantic so numbering and cross-references remain automatic.
-- For DOCX outputs, verify the resulting Word file visually against the official template. Header/footer, margins, section breaks, numbering, and table styles are the highest-risk areas.
-- For team reports, recommend separate section files only when the report is large enough to benefit from split ownership.
+The deterministic scripts specified in `DESIGN.md` are not yet implemented in this repository. Until they exist, use available DOCX tooling and state exactly which fidelity checks were and were not performed.

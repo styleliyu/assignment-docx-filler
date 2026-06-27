@@ -14,6 +14,8 @@ desktop.ini
 *.tmp
 *.bak
 *.orig
+work/
+output/
 
 # LaTeX build artifacts
 *.aux

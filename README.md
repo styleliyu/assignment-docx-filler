@@ -1,139 +1,113 @@
-# better-word
+# assignment-docx-filler
 
-`better-word` 是一个 Codex skill，用 AI 生成课程报告，并按目标文件选择最稳的排版路线：PDF 走 LaTeX，Word 走原生 `.docx` 模板。
+一个面向大学编程作业的 Codex Skill：把短代码、文字答案和用户提供的真实截图填入教师原始 Word 模板，同时尽量不破坏题目顺序、边框、样式、页眉页脚、编号和节设置。
 
-核心思路是：不要把所有场景都塞进 LaTeX。只交 PDF 时，用 LaTeX 获得稳定排版；必须交 Word 且要像官方模板时，直接复制并填充原始 `.docx` 模板，避免 LaTeX 转 Word 带来的格式损失。
+## 当前状态
 
-## 适合做什么
+当前仓库处于 **阶段 0：产品与技术设计完成，确定性脚本尚未实现**。
 
-- 从学校官方 Word、PDF 或截图模板中提取页边距、字体字号、行距、标题层级、页眉页脚、图表编号和参考文献规则。
-- 生成可复用的中文课程报告 LaTeX 模板。
-- 只需要 PDF 时，让 AI 按固定模板写 `.tex`。
-- 需要 Word 时，基于官方 `.docx` 模板生成新 `.docx`，尽量保留原始样式、页眉页脚、编号和节设置。
-- 编译并检查 PDF，减少 Word 合并、图片拖动、样式联动导致的格式问题。
+仓库已经包含完整的领域定义、架构决策、数据契约、脚本接口和验收标准，但暂时不应声称能自动完成高保真 DOCX 填充。下一阶段将按 [DESIGN.md](./DESIGN.md) 实现和验证脚本。
+
+## 为什么需要这个项目
+
+常见编程作业模板如下：
+
+```text
+第 1 题
+题目描述……
+
+代码：
+[填写代码]
+
+运行结果：
+[插入真实截图]
+```
+
+直接让 AI 重新生成 Word，容易打乱原有顺序、边框、编号和分页。LaTeX 或 Pandoc 可以生成新文档，但不能可靠还原教师现有 DOCX。
+
+本项目选择另一条路线：**复制教师原模板，只在明确的作答区域内定点修改 OOXML。**
+
+## 第一版体验
+
+用户只需要提供：
+
+1. 教师原始 `.docx`；没有 DOCX 时可提供 PDF 作为后备模板。
+2. 每道题的代码或文字答案，例如 `q1.py`、`q2.cpp`。
+3. 用户自己截取的真实运行截图，例如 `q1-1.png`、`q1-2.png`。
+
+Skill 将执行：
+
+```text
+模板校验
+→ 识别题目与“代码/运行结果”锚点
+→ 映射答案材料
+→ 只确认冲突项
+→ 生成模板副本
+→ Word 渲染与保真检查
+→ 输出提交文件和诊断报告
+```
+
+## 产品边界
+
+第一版：
+
+- Windows + 已安装 Microsoft Word。
+- 标签型 DOCX 模板，答案位于“代码：”“运行结果：”等锚点之后。
+- 任意纯文本代码语言，不执行、不重构、不补注释。
+- 用户提供 PNG/JPG/JPEG 截图，每题可有多张。
+- 允许答案导致换页，但不允许作答区域外的模板结构丢失。
+- PDF 仅作后备输入；默认填充并输出 PDF，不承诺 PDF 转高保真 DOCX。
+
+第一版不支持：
+
+- 表格答案槽、文本框和复杂公式。
+- 加密 DOCX、DOCM 和未处理的修订模式。
+- 自动运行代码或生成伪造截图。
+- 跨平台高保真 Word 渲染。
+- 将 LaTeX、Pandoc 或 HTML 转换作为 DOCX 主路径。
+
+## 技术方向
+
+- `lxml`：OOXML 定点读写与结构比较。
+- `python-docx`：常规样式、节和尺寸读取。
+- `pywin32`：Microsoft Word COM 渲染。
+- `Pillow`：图片处理与视觉检查。
+- `PyMuPDF`：PDF 后备模板分析和填充。
+- `pytest`：fixture、集成和回归测试。
+
+详细设计见 [DESIGN.md](./DESIGN.md)。核心术语见 [CONTEXT.md](./CONTEXT.md)。
+
+## 调研依据
+
+- [Microsoft Word 内容控件](https://learn.microsoft.com/en-us/office/client-developer/word/content-controls-in-word)：通过受控区域构建结构化文档。
+- [docxtpl](https://github.com/elapouya/python-docx-template)、[docxtemplater](https://github.com/open-xml-templating/docxtemplater)、[Carbone](https://github.com/carboneio/carbone)：保留模板并注入数据的开源实现。
+- [AutoDocX](https://github.com/SHAYANZAWAR/AutoDocX)、[Lab Record Maker](https://github.com/deependrasinghsolanki03-alt/lab-record-maker)：代码作业 Word 自动化的直接参考。
+- [DocLayNet](https://arxiv.org/abs/2206.01062)、[PubLayNet](https://doi.org/10.1109/icdar.2019.00166)、[LayoutParser](https://arxiv.org/abs/2103.15348)：PDF 后备模式的版面识别研究基础。
 
 ## 安装
 
-把这个仓库放到 Codex skills 目录下，目录名保持为 `better-word`。
-
-在 GitHub 页面点击 `Code` 复制仓库地址，然后运行：
-
-Windows：
+当前版本主要用于设计评审。仍可安装 Skill 契约以供 Codex 读取：
 
 ```powershell
-git clone <复制的仓库地址> "$env:USERPROFILE\.codex\skills\better-word"
+git clone https://github.com/styleliyu/assignment-docx-filler.git "$env:USERPROFILE\.codex\skills\assignment-docx-filler"
 ```
 
-macOS/Linux：
-
-```bash
-git clone <复制的仓库地址> ~/.codex/skills/better-word
-```
-
-如果已经下载为压缩包，也可以手动解压到对应目录：
+调用示例：
 
 ```text
-~/.codex/skills/better-word
+Use $assignment-docx-filler to fill this programming assignment template.
+Use my code files and screenshots, preserve the original DOCX formatting,
+and ask only when an answer region is ambiguous.
 ```
 
-或 Windows：
+## 文档
 
-```text
-C:\Users\<你的用户名>\.codex\skills\better-word
-```
-
-## 最短用法
-
-只需要告诉 Codex 三件事：
-
-1. 模板文件：最好是官方 `.docx`，只有 PDF/截图也可以。
-2. 报告内容：主题、提纲、资料或已有草稿。
-3. 目标格式：`PDF`、`Word` 或 `both`。
-
-如果目标是 Word 且要求“看起来像官方模板”，必须提供原始 `.docx` 模板。仅靠截图或 LaTeX 转 Word，无法稳定做到以假乱真。
-
-## 使用示例
-
-分析学校模板：
-
-```text
-Use $better-word to analyze this official course report template and extract the formatting rules.
-```
-
-生成 PDF：
-
-```text
-Use $better-word to write a course report about <主题>. Target output: PDF.
-```
-
-生成高保真 Word：
-
-```text
-Use $better-word to write a course report about <主题>. Target output: Word. Use the official .docx template as the formatting source of truth.
-```
-
-同时生成 Word 和 PDF：
-
-```text
-Use $better-word to write a course report about <主题>. Target output: both Word and PDF. Word fidelity is more important than LaTeX typography.
-```
-
-## 依赖
-
-必须：
-
-- 支持 Codex skills 的 Codex 环境。
-
-可选：
-
-- 本地 TeX 工具链：TeX Live 或 MiKTeX。
-- 编译命令：`latexmk -xelatex`，或运行 `xelatex` 两次。
-- Word 生成：官方 `.docx` 模板；可选 `python-docx`、直接 OOXML 编辑、`docxtpl`。
-- 近似 Word 导出：Pandoc；适合草稿，不适合以假乱真的模板还原。
-- 在线替代方案：Overleaf，建议选择 XeLaTeX 或 LuaLaTeX 编译器。
-
-中文报告建议优先使用 XeLaTeX 或 LuaLaTeX。模板中默认使用 `ctexart`，适合作为中文课程报告的起点；具体学校字体、字号和页边距应按官方模板审计结果调整。
-
-高保真 `.docx` 不建议从 LaTeX/Pandoc 反向转换。Pandoc 可以做可编辑草稿，但很难完整还原 Word 模板里的页眉页脚、节、编号、标题页和样式继承。真正要像官方模板，应以原始 `.docx` 为源文件，复制后填充内容。
-
-## 仓库结构
-
-```text
-.
-├── SKILL.md
-├── agents/
-│   └── openai.yaml
-├── assets/
-│   └── course-report-template.tex
-├── references/
-│   ├── template-analysis-checklist.md
-│   └── word-export.md
-├── LICENSE
-└── README.md
-```
-
-## 验证
-
-在本仓库根目录运行 skill 校验：
-
-```powershell
-python "$env:USERPROFILE\.codex\skills\.system\skill-creator\scripts\quick_validate.py" .
-```
-
-如果本机安装了 TeX 工具链，可以复制模板到临时目录后编译：
-
-```powershell
-Copy-Item .\assets\course-report-template.tex $env:TEMP\better-word-template.tex
-Push-Location $env:TEMP
-latexmk -xelatex -interaction=nonstopmode better-word-template.tex
-Pop-Location
-```
-
-如果只是需要近似可编辑 Word，安装 Pandoc 后可以导出：
-
-```powershell
-pandoc main.tex --from latex --to docx --output main.docx --reference-doc reference.docx
-```
+- [设计文档](./DESIGN.md)
+- [领域词汇](./CONTEXT.md)
+- [ADR 0001：DOCX 原生修改和 Word 验证](./docs/adr/0001-use-docx-native-word-validation.md)
+- [ADR 0002：PDF 仅作为后备输入](./docs/adr/0002-pdf-is-fallback-only.md)
+- [模板分析清单](./references/template-analysis-checklist.md)
+- [DOCX 保真规则](./references/docx-fidelity.md)
 
 ## 许可证
 

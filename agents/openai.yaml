@@ -1,4 +1,4 @@
 interface:
-  display_name: "Better Word"
-  short_description: "PDF and high-fidelity Word reports"
-  default_prompt: "Use $better-word to create my course report as PDF or high-fidelity Word from the official template."
+  display_name: "Assignment DOCX Filler"
+  short_description: "Fill assignment DOCX templates without format drift"
+  default_prompt: "Use $assignment-docx-filler to fill my programming assignment template with code and user-provided screenshots while preserving its Word formatting."
