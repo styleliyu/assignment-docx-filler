@@ -17,6 +17,11 @@ desktop.ini
 work/
 output/
 
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
 # LaTeX build artifacts
 *.aux
 *.bbl
